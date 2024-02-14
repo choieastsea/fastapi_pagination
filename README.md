@@ -1,9 +1,10 @@
 # fastapi_pagination
 
-create list api with fastapi which provides pagination, sorting, filtering with RHS colon
+create list api via fastapi which provides pagination, sorting, filtering with RHS colon
 
 - fastapi
 - SQLAlchemy 2.0 (AsyncSession)
+- pydantic v2
 
 ## how to
 
