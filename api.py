@@ -16,23 +16,22 @@ async def health_check(session: AsyncSession = Depends(db.get_db)):
 
 
 @api_router.get('/accounts/', response_model=list[AccountResponseDto])
-async def list(sort: SortQueryBasic = Depends(), pagination: PaginationQueryBasic = Depends(), session: AsyncSession = Depends(db.get_db)) -> list[Account]:
-    all_accounts_query = select(Account)
-    # 1. sort
-    if sort.sort_by and not hasattr(Account, sort.sort_by):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f'there is no field named {sort.sort_by} in {Account.__tablename__}')
-    model_field = getattr(Account, sort.sort_by)
-    sort_query = all_accounts_query.order_by(desc(
-        model_field)) if sort.order_by == 'desc' else all_accounts_query.order_by(model_field)
-    # TODO 2. filter
-    filter_query = sort_query
+async def list(queryInput: AccountQuery = Depends(), session: AsyncSession = Depends(db.get_db)) -> list[Account]:
+    # 1. filter
+    list_query = queryInput.get_filtered_query(db_model=Account)
+    # 2. sort
+    if queryInput.sort_by:
+        if not hasattr(Account, queryInput.sort_by):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=f'there is no field named {queryInput.sort_by} in {Account.__tablename__}')
+        model_field = getattr(Account, queryInput.sort_by)
+        list_query = list_query.order_by(desc(
+            model_field)) if queryInput.order_by == 'desc' else queryInput.order_by(model_field)
     # 3. pagination
-    strt_idx = (pagination.page-1) * pagination.per_page + 1
-
-    paged_accounts_query = filter_query.offset(
-        strt_idx).limit(pagination.per_page)
-    accounts = await session.scalars(paged_accounts_query)
+    strt_idx = (queryInput.page-1) * queryInput.per_page
+    list_query = list_query.offset(
+        strt_idx).limit(queryInput.per_page)
+    accounts = await session.scalars(list_query)
     return accounts
 
 
